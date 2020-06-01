@@ -1,0 +1,131 @@
+
+// you must first import the sample points at which you want to obtain the radiometric values
+
+
+// Select the range in which you want to get images from Landsat 8
+var Landsat = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR')
+            .filterDate('2013-12-01','2014-01-01')
+            .filterBounds(table) ;
+
+
+// One should pay attention to the number of images that exist between the analysis dates because the list has the limit of 90 images
+function selected(image){
+  return ee.Image(image).select(['B1','B2','B3','B4', 'B5','B7', 'pixel_qa']) }
+var colecao = Landsat.map(selected) ;
+var listed = colecao.toList(90) ;
+var size = listed.size().getInfo();
+
+//Loop for acquisition of radiometric values
+for(var i = 0;i < size;++i)
+{
+  var a = ee.String ('LANDSAT/LC08/C01/T1_SR/'+ee.Image(listed.get(i)).get('system:index').getInfo());
+  var Name = ee.Image(listed.get(i)).get('system:index').getInfo();
+  var ndvi = ee.Image(a);
+  var teste = i;
+
+var get_stats = function (feature) {
+  return ee.Feature(null, {
+    'B2':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B2'),
+      'B3':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B3'),
+      'B4':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B4'),
+      'B5':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B5'),
+      'B6':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B6'),
+	'B7':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('B7'),
+      	'QA':
+      ee.Dictionary(
+        ndvi.reduceRegion({
+          reducer: ee.Reducer.mean(), 
+          geometry: ee.Feature(feature).geometry(), 
+          scale: 30, 
+          bestEffort: true, 
+          maxPixels: 10e12, 
+          tileScale: 2
+          }
+        )
+      ).get('pixel_qa'),
+      'ID': ee.Feature(feature).get('ID')})};
+
+//Adding the values to the attribute table
+var buffer_stats = table.map(get_stats);
+
+// Selecting the QA for image filtering
+var qa = buffer_stats.aggregate_max('QA');
+var n = ee.List([qa]);
+var x = (n.get(0).getInfo());
+
+//Exporting cloudless images by the QA value criterion
+if (x < 366) {
+print (Name);
+Export.table.toDrive({
+  collection: buffer_stats,
+  description: Name,
+  fileFormat: 'CSV',
+   folder:'Serie_atual'
+})}}
+
